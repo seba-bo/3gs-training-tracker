@@ -128,11 +128,11 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
     await _prefs.setString('shooters', jsonEncode(jsonList));
   }
 
-  void _cleanBoard() {
+  void _clearBoard() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Clean Board'),
+        title: const Text('Clear Board'),
         content: const Text('Are you sure you want to delete all shooters and runs?'),
         actions: [
           TextButton(
@@ -318,17 +318,29 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
                 padding: const EdgeInsets.all(16.0),
                 child: Column(
                   children: [
-                    const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text('🎯', style: TextStyle(fontSize: 32)),
-                        SizedBox(width: 8),
-                        Text(
-                          '3GS Training Tracker',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        const Row(
+                          children: [
+                            Text('🎯', style: TextStyle(fontSize: 32)),
+                            SizedBox(width: 8),
+                            Text(
+                              '3GS Training Tracker',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        PopupMenuButton(
+                          itemBuilder: (context) => [
+                            PopupMenuItem(
+                              onTap: _clearBoard,
+                              child: const Text('Clear Board'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -399,85 +411,51 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Add Shooter and Clean Board
-          Row(
-            children: [
-              Container(
-                width: 80,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1e293b),
-                  borderRadius: BorderRadius.circular(12),
+          // Add Shooter
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1e293b),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Add Shooter',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
+                const SizedBox(height: 12),
+                Row(
                   children: [
-                    const Text(
-                      'Reset',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 12),
-                    ElevatedButton(
-                      onPressed: _cleanBoard,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        padding: const EdgeInsets.all(12),
-                        minimumSize: const Size(40, 40),
+                    Expanded(
+                      child: TextField(
+                        controller: _nameController,
+                        decoration: InputDecoration(
+                          hintText: 'Shooter name',
+                          filled: true,
+                          fillColor: const Color(0xFF334155),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(8),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        onSubmitted: (_) => _addShooter(),
                       ),
-                      child: const Icon(Icons.delete_forever),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _addShooter,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        padding: const EdgeInsets.all(16),
+                      ),
+                      child: const Icon(Icons.add),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1e293b),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Add Shooter',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _nameController,
-                              decoration: InputDecoration(
-                                hintText: 'Shooter name',
-                                filled: true,
-                                fillColor: const Color(0xFF334155),
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                  borderSide: BorderSide.none,
-                                ),
-                              ),
-                              onSubmitted: (_) => _addShooter(),
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          ElevatedButton(
-                            onPressed: _addShooter,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              padding: const EdgeInsets.all(16),
-                            ),
-                            child: const Icon(Icons.add),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
 
           const SizedBox(height: 16),
@@ -977,10 +955,6 @@ Widget _buildGunFilterRow() {
                         _leaderboardView,
                         _gunFilter == 'all' ? null : _gunFilter,
                       )!;
-                      final filteredRuns = _gunFilter == 'all'
-                          ? shooter.runs
-                          : shooter.runs.where((r) => r.gun == _gunFilter).toList();
-
                       final medal = index == 0
                           ? '🥇'
                           : index == 1
