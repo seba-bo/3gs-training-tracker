@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 
 void main() {
   runApp(const IPSCTrackerApp());
@@ -28,6 +30,20 @@ class Shooter {
   final List<Run> runs;
 
   Shooter({required this.id, required this.name, required this.runs});
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'runs': runs.map((r) => r.toJson()).toList(),
+  };
+
+  factory Shooter.fromJson(Map<String, dynamic> json) {
+    return Shooter(
+      id: json['id'],
+      name: json['name'],
+      runs: (json['runs'] as List).map((r) => Run.fromJson(r)).toList(),
+    );
+  }
 }
 
 class Run {
@@ -44,6 +60,24 @@ class Run {
     required this.hitFactor,
     required this.gun,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'time': time,
+    'points': points,
+    'hitFactor': hitFactor,
+    'gun': gun,
+  };
+
+  factory Run.fromJson(Map<String, dynamic> json) {
+    return Run(
+      id: json['id'],
+      time: json['time'],
+      points: json['points'],
+      hitFactor: json['hitFactor'],
+      gun: json['gun'],
+    );
+  }
 }
 
 // Small value object to return icon + label together
@@ -70,6 +104,29 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
   String _gunType = 'pistol';
   String _leaderboardView = 'hitfactor';
   String _gunFilter = 'pistol';
+  late SharedPreferences _prefs;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    _prefs = await SharedPreferences.getInstance();
+    final data = _prefs.getString('shooters');
+    if (data != null) {
+      final List<dynamic> jsonList = jsonDecode(data);
+      setState(() {
+        shooters = jsonList.map((s) => Shooter.fromJson(s)).toList();
+      });
+    }
+  }
+
+  Future<void> _saveData() async {
+    final jsonList = shooters.map((s) => s.toJson()).toList();
+    await _prefs.setString('shooters', jsonEncode(jsonList));
+  }
 
   void _addShooter() {
     if (_nameController.text.trim().isNotEmpty) {
@@ -81,12 +138,14 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
         ));
         _nameController.clear();
       });
+      _saveData();
     }
   }
   void _removeShooter(int id) {
     setState(() {
       shooters.removeWhere((s) => s.id == id);
     });
+    _saveData();
   }
 
   void _recordScore() {
@@ -109,6 +168,7 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
         _selectedShooter = null;
         _currentScreen = 0;
       });
+      _saveData();
     }
   }
 
@@ -117,6 +177,7 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
       final shooter = shooters.firstWhere((s) => s.id == shooterId);
       shooter.runs.removeWhere((r) => r.id == runId);
     });
+    _saveData();
   }
 
   Run? _getBestRun(Shooter shooter, String criterion, String? filterGun) {
@@ -922,7 +983,7 @@ Widget _buildGunFilterRow() {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    '${best.points} pts in ${best.time}s • ${filteredRuns.length} run${filteredRuns.length != 1 ? 's' : ''}',
+                                    '${best.points} pts in ${best.time}s',
                                     style: TextStyle(
                                       fontSize: 12,
                                       color: Colors.grey[400],
