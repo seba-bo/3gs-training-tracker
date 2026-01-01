@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 void main() {
   runApp(const IPSCTrackerApp());
@@ -163,6 +164,50 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
       default:
         return const GunInfo('❓', 'Unknown');
     }
+  }
+
+  void _copyLeaderboardToClipboard() {
+    final sorted = _getSortedShooters();
+    final buffer = StringBuffer();
+
+    buffer.writeln(_leaderboardView == 'hitfactor'
+        ? 'Rankings by Best Hit Factor'
+        : 'Rankings by Best Points');
+    buffer.writeln('(${_getGunInfo(_gunFilter).label} only)');
+    buffer.writeln();
+
+    if (sorted.isEmpty) {
+      buffer.writeln('No scores recorded yet for ${_getGunInfo(_gunFilter).label}');
+    } else {
+      for (final entry in sorted.asMap().entries) {
+        final index = entry.key;
+        final shooter = entry.value;
+        final best = _getBestRun(
+          shooter,
+          _leaderboardView,
+          _gunFilter,
+        )!;
+        final filteredRuns = shooter.runs.where((r) => r.gun == _gunFilter).toList();
+
+        final medal = index == 0
+            ? '🥇'
+            : index == 1
+                ? '🥈'
+                : index == 2
+                    ? '🥉'
+                    : '${index + 1}';
+
+        buffer.writeln('$medal ${_getGunInfo(best.gun).icon} ${shooter.name}');
+        buffer.writeln('  ${best.points} pts in ${best.time}s • ${filteredRuns.length} run${filteredRuns.length != 1 ? 's' : ''}');
+        buffer.writeln('  ${_leaderboardView == 'hitfactor' ? 'HF: ${best.hitFactor.toStringAsFixed(2)}' : 'Points: ${best.points}'}');
+        buffer.writeln();
+      }
+    }
+
+    Clipboard.setData(ClipboardData(text: buffer.toString()));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Leaderboard copied to clipboard')),
+    );
   }
 
   @override
