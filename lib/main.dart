@@ -128,6 +128,32 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
     await _prefs.setString('shooters', jsonEncode(jsonList));
   }
 
+  void _cleanBoard() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clean Board'),
+        content: const Text('Are you sure you want to delete all shooters and runs?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              setState(() {
+                shooters.clear();
+              });
+              _saveData();
+              Navigator.of(context).pop();
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _addShooter() {
     if (_nameController.text.trim().isNotEmpty) {
       setState(() {
@@ -373,51 +399,85 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
-          // Add Shooter
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1e293b),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Add Shooter',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          // Add Shooter and Clean Board
+          Row(
+            children: [
+              Container(
+                width: 80,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1e293b),
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                const SizedBox(height: 12),
-                Row(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _nameController,
-                        decoration: InputDecoration(
-                          hintText: 'Shooter name',
-                          filled: true,
-                          fillColor: const Color(0xFF334155),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide.none,
-                          ),
-                        ),
-                        onSubmitted: (_) => _addShooter(),
-                      ),
+                    const Text(
+                      'Reset',
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(height: 12),
                     ElevatedButton(
-                      onPressed: _addShooter,
+                      onPressed: _cleanBoard,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        padding: const EdgeInsets.all(16),
+                        backgroundColor: Colors.red,
+                        padding: const EdgeInsets.all(12),
+                        minimumSize: const Size(40, 40),
                       ),
-                      child: const Icon(Icons.add),
+                      child: const Icon(Icons.delete_forever),
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1e293b),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Add Shooter',
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: TextField(
+                              controller: _nameController,
+                              decoration: InputDecoration(
+                                hintText: 'Shooter name',
+                                filled: true,
+                                fillColor: const Color(0xFF334155),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                              ),
+                              onSubmitted: (_) => _addShooter(),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: _addShooter,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              padding: const EdgeInsets.all(16),
+                            ),
+                            child: const Icon(Icons.add),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
 
           const SizedBox(height: 16),
