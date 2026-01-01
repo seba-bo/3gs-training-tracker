@@ -1,6 +1,6 @@
 {
-    "name": "ipsc_training",
-    "short_name": "ipsc_training",
+    "name": "3gs_training",
+    "short_name": "3gs_training",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

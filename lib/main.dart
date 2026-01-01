@@ -10,7 +10,7 @@ class IPSCTrackerApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: '3GS Training Tracker',
+      title: '3GS Training',
       theme: ThemeData(
         brightness: Brightness.dark,
         primarySwatch: Colors.blue,
@@ -68,7 +68,7 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
   Shooter? _selectedShooter;
   String _gunType = 'pistol';
   String _leaderboardView = 'hitfactor';
-  String _gunFilter = 'all';
+  String _gunFilter = 'pistol';
 
   void _addShooter() {
     if (_nameController.text.trim().isNotEmpty) {
@@ -133,7 +133,7 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
   }
 
   List<Shooter> _getSortedShooters() {
-    final filterGun = _gunFilter == 'all' ? null : _gunFilter;
+    final filterGun = _gunFilter;
     final filtered = shooters.where((s) {
       final best = _getBestRun(s, _leaderboardView, filterGun);
       return best != null;
@@ -676,19 +676,6 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
           // Gun Filter
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _gunFilter = 'all'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _gunFilter == 'all'
-                        ? Colors.purple
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  child: const Text('All Guns', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-              const SizedBox(width: 4),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () => setState(() => _gunFilter = 'pistol'),
