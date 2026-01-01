@@ -173,7 +173,7 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
     buffer.writeln(_leaderboardView == 'hitfactor'
         ? 'Rankings by Best Hit Factor'
         : 'Rankings by Best Points');
-    buffer.writeln('(${_getGunInfo(_gunFilter).label} only)');
+    buffer.writeln('(${_getGunInfo(_gunFilter).label})');
     buffer.writeln();
 
     if (sorted.isEmpty) {
@@ -187,7 +187,6 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
           _leaderboardView,
           _gunFilter,
         )!;
-        final filteredRuns = shooter.runs.where((r) => r.gun == _gunFilter).toList();
 
         final medal = index == 0
             ? '🥇'
@@ -197,10 +196,13 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
                     ? '🥉'
                     : '${index + 1}';
 
-        buffer.writeln('$medal ${_getGunInfo(best.gun).icon} ${shooter.name}');
-        buffer.writeln('  ${best.points} pts in ${best.time}s • ${filteredRuns.length} run${filteredRuns.length != 1 ? 's' : ''}');
-        buffer.writeln('  ${_leaderboardView == 'hitfactor' ? 'HF: ${best.hitFactor.toStringAsFixed(2)}' : 'Points: ${best.points}'}');
-        buffer.writeln();
+        buffer.write('$medal ${shooter.name}: ');
+        if (_leaderboardView == 'hitfactor') {
+          buffer.write(best.hitFactor.toStringAsFixed(2));
+        } else {
+          buffer.write(best.points);
+        }
+        buffer.writeln(' (${best.points} pts in ${best.time}s)');
       }
     }
 
@@ -711,261 +713,276 @@ class _IPSCTrackerHomeState extends State<IPSCTrackerHome> {
     );
   }
 
-  Widget _buildLeaderboardScreen() {
+Widget _buildGunFilterRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => setState(() => _gunFilter = 'pistol'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _gunFilter == 'pistol'
+                  ? Colors.purple
+                  : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            child: Text('${_getGunInfo('pistol').icon} ${_getGunInfo('pistol').label}', style: TextStyle(fontSize: 12)),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => setState(() => _gunFilter = 'pcc'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _gunFilter == 'pcc'
+                  ? Colors.purple
+                  : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            child: Text('${_getGunInfo('pcc').icon} ${_getGunInfo('pcc').label}', style: TextStyle(fontSize: 12)),
+          ),
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => setState(() => _gunFilter = 'shotgun'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _gunFilter == 'shotgun'
+                  ? Colors.purple
+                  : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+            ),
+            child: Text('${_getGunInfo('shotgun').icon} ${_getGunInfo('shotgun').label}', style: TextStyle(fontSize: 12)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildScoreTypeRow() {
+    return Row(
+      children: [
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => setState(() => _leaderboardView = 'hitfactor'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _leaderboardView == 'hitfactor'
+                  ? Colors.blue
+                  : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text('By Hit Factor'),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: ElevatedButton(
+            onPressed: () => setState(() => _leaderboardView = 'points'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: _leaderboardView == 'points'
+                  ? Colors.blue
+                  : const Color(0xFF334155),
+              padding: const EdgeInsets.symmetric(vertical: 12),
+            ),
+            child: const Text('By Points'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLeaderboardContent() {
     final sorted = _getSortedShooters();
 
+    return GestureDetector(
+      onLongPress: _copyLeaderboardToClipboard,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1e293b),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _leaderboardView == 'hitfactor'
+                      ? Icons.emoji_events
+                      : Icons.military_tech,
+                  color: _leaderboardView == 'hitfactor'
+                      ? Colors.yellow
+                      : Colors.blue,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _leaderboardView == 'hitfactor'
+                        ? 'Rankings by Best Hit Factor'
+                        : 'Rankings by Best Points',
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (_gunFilter != 'all')
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  '(${_getGunInfo(_gunFilter).label} only)',
+                  style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                ),
+              ),
+            const SizedBox(height: 16),
+            sorted.isEmpty
+                ? Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32.0),
+                      child: Text(
+                        'No scores recorded yet${_gunFilter != 'all' ? ' for ${_getGunInfo(_gunFilter).label}' : ''}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                : Column(
+                    children: sorted.asMap().entries.map((entry) {
+                      final index = entry.key;
+                      final shooter = entry.value;
+                      final best = _getBestRun(
+                        shooter,
+                        _leaderboardView,
+                        _gunFilter == 'all' ? null : _gunFilter,
+                      )!;
+                      final filteredRuns = _gunFilter == 'all'
+                          ? shooter.runs
+                          : shooter.runs.where((r) => r.gun == _gunFilter).toList();
+
+                      final medal = index == 0
+                          ? '🥇'
+                          : index == 1
+                              ? '🥈'
+                              : index == 2
+                                  ? '🥉'
+                                  : '${index + 1}';
+
+                      final bgColor = index == 0
+                          ? const Color(0xFF854d0e)
+                          : index == 1
+                              ? const Color(0xFF334155)
+                              : index == 2
+                                  ? const Color(0xFF7c2d12)
+                                  : const Color(0xFF334155);
+
+                      final borderColor = index == 0
+                          ? Colors.yellow
+                          : index == 1
+                              ? Colors.grey
+                              : index == 2
+                                  ? Colors.orange
+                                  : Colors.transparent;
+
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: bgColor,
+                          border: Border.all(
+                            color: borderColor,
+                            width: index < 3 ? 2 : 0,
+                          ),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 32,
+                              child: Text(
+                                medal,
+                                style: const TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    '${_getGunInfo(best.gun).icon} ${shooter.name}',
+                                    style: const TextStyle(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '${best.points} pts in ${best.time}s • ${filteredRuns.length} run${filteredRuns.length != 1 ? 's' : ''}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[400],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Column(
+                              crossAxisAlignment: CrossAxisAlignment.end,
+                              children: [
+                                Text(
+                                  _leaderboardView == 'hitfactor'
+                                      ? best.hitFactor.toStringAsFixed(2)
+                                      : best.points.toString(),
+                                  style: TextStyle(
+                                    fontSize: 24,
+                                    fontWeight: FontWeight.bold,
+                                    color: _leaderboardView == 'hitfactor'
+                                        ? Colors.green
+                                        : Colors.blue,
+                                  ),
+                                ),
+                                Text(
+                                  _leaderboardView == 'hitfactor'
+                                      ? 'best HF'
+                                      : 'best points',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[400],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+                  ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLeaderboardScreen() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         children: [
           // Gun Filter
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _gunFilter = 'pistol'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _gunFilter == 'pistol'
-                        ? Colors.purple
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  child: Text('${_getGunInfo('pistol').icon} ${_getGunInfo('pistol').label}', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _gunFilter = 'pcc'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _gunFilter == 'pcc'
-                        ? Colors.purple
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  child: Text('${_getGunInfo('pcc').icon} ${_getGunInfo('pcc').label}', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _gunFilter = 'shotgun'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _gunFilter == 'shotgun'
-                        ? Colors.purple
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                  ),
-                  child: Text('${_getGunInfo('shotgun').icon} ${_getGunInfo('shotgun').label}', style: TextStyle(fontSize: 12)),
-                ),
-              ),
-            ],
-          ),
+          _buildGunFilterRow(),
           const SizedBox(height: 8),
 
           // Score Type
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _leaderboardView = 'hitfactor'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _leaderboardView == 'hitfactor'
-                        ? Colors.blue
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('By Hit Factor'),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () => setState(() => _leaderboardView = 'points'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: _leaderboardView == 'points'
-                        ? Colors.blue
-                        : const Color(0xFF334155),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  child: const Text('By Points'),
-                ),
-              ),
-            ],
-          ),
+          _buildScoreTypeRow(),
           const SizedBox(height: 16),
 
           // Leaderboard
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: const Color(0xFF1e293b),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(
-                      _leaderboardView == 'hitfactor'
-                          ? Icons.emoji_events
-                          : Icons.military_tech,
-                      color: _leaderboardView == 'hitfactor'
-                          ? Colors.yellow
-                          : Colors.blue,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        _leaderboardView == 'hitfactor'
-                            ? 'Rankings by Best Hit Factor'
-                            : 'Rankings by Best Points',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                if (_gunFilter != 'all')
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Text(
-                      '(${_getGunInfo(_gunFilter).label} only)',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[400]),
-                    ),
-                  ),
-                const SizedBox(height: 16),
-                sorted.isEmpty
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(32.0),
-                          child: Text(
-                            'No scores recorded yet${_gunFilter != 'all' ? ' for ${_getGunInfo(_gunFilter).label}' : ''}',
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                        ),
-                      )
-                    : Column(
-                        children: sorted.asMap().entries.map((entry) {
-                          final index = entry.key;
-                          final shooter = entry.value;
-                          final best = _getBestRun(
-                            shooter,
-                            _leaderboardView,
-                            _gunFilter == 'all' ? null : _gunFilter,
-                          )!;
-                          final filteredRuns = _gunFilter == 'all'
-                              ? shooter.runs
-                              : shooter.runs.where((r) => r.gun == _gunFilter).toList();
-
-                          final medal = index == 0
-                              ? '🥇'
-                              : index == 1
-                                  ? '🥈'
-                                  : index == 2
-                                      ? '🥉'
-                                      : '${index + 1}';
-
-                          final bgColor = index == 0
-                              ? const Color(0xFF854d0e)
-                              : index == 1
-                                  ? const Color(0xFF334155)
-                                  : index == 2
-                                      ? const Color(0xFF7c2d12)
-                                      : const Color(0xFF334155);
-
-                          final borderColor = index == 0
-                              ? Colors.yellow
-                              : index == 1
-                                  ? Colors.grey
-                                  : index == 2
-                                      ? Colors.orange
-                                      : Colors.transparent;
-
-                          return Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: bgColor,
-                              border: Border.all(
-                                color: borderColor,
-                                width: index < 3 ? 2 : 0,
-                              ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 32,
-                                  child: Text(
-                                    medal,
-                                    style: const TextStyle(
-                                      fontSize: 24,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                                const SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${_getGunInfo(best.gun).icon} ${shooter.name}',
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        '${best.points} pts in ${best.time}s • ${filteredRuns.length} run${filteredRuns.length != 1 ? 's' : ''}',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[400],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      _leaderboardView == 'hitfactor'
-                                          ? best.hitFactor.toStringAsFixed(2)
-                                          : best.points.toString(),
-                                      style: TextStyle(
-                                        fontSize: 24,
-                                        fontWeight: FontWeight.bold,
-                                        color: _leaderboardView == 'hitfactor'
-                                            ? Colors.green
-                                            : Colors.blue,
-                                      ),
-                                    ),
-                                    Text(
-                                      _leaderboardView == 'hitfactor'
-                                          ? 'best HF'
-                                          : 'best points',
-                                      style: TextStyle(
-                                        fontSize: 10,
-                                        color: Colors.grey[400],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ],
-            ),
-          ),
+          _buildLeaderboardContent(),
         ],
       ),
     );
