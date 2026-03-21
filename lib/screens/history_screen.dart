@@ -86,8 +86,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final run = entry.value;
         final medal = position == 1 ? '🥇' : position == 2 ? '🥈' : position == 3 ? '🥉' : position.toString();
         
-        // Perfect score: max points in this category AND no penalties
-        final isPerfect = run.penalties == 0 && run.points >= maxPointsInCategory;
+        // Perfect score: max points in this category
+        final isPerfect = run.points >= maxPointsInCategory;
         final perfectScore = isPerfect ? ' 🎯' : '';
         
         buffer.writeln('$medal ${member.name}: ${run.finalHitFactor.toStringAsFixed(2)}$perfectScore (${run.finalPoints} pts in ${run.time}s)');
@@ -108,17 +108,17 @@ class _HistoryScreenState extends State<HistoryScreen> {
         if (runsForGun.isEmpty) continue;
         
         // Find best run per member for this gun type
-        final memberBestRuns = <int, Run>{};
+        final memberBestPoints = <int, Run>{};
         for (final run in runsForGun) {
-          if (!memberBestRuns.containsKey(run.memberId) ||
-              run.finalHitFactor > memberBestRuns[run.memberId]!.finalHitFactor) {
-            memberBestRuns[run.memberId] = run;
+          if (!memberBestPoints.containsKey(run.memberId) ||
+              run.finalPoints > memberBestPoints[run.memberId]!.finalPoints) {
+            memberBestPoints[run.memberId] = run;
           }
         }
         
         // Sort by hit factor
-        final sortedEntries = memberBestRuns.entries.toList()
-          ..sort((a, b) => b.value.finalHitFactor.compareTo(a.value.finalHitFactor));
+        final sortedEntries = memberBestPoints.entries.toList()
+          ..sort((a, b) => b.value.finalPoints.compareTo(a.value.finalPoints));
         
         // Get top 3, but include all members tied at position 3
         final topThree = <MapEntry<int, Run>>[];
@@ -127,9 +127,9 @@ class _HistoryScreenState extends State<HistoryScreen> {
           if (sortedEntries.length > 1) {
             topThree.add(sortedEntries[1]);
             if (sortedEntries.length > 2) {
-              final thirdFactor = sortedEntries[2].value.finalHitFactor;
+              final thirdPoints = sortedEntries[2].value.finalPoints;
               for (final entry in sortedEntries.skip(2)) {
-                if (entry.value.finalHitFactor == thirdFactor) {
+                if (entry.value.finalPoints == thirdPoints) {
                   topThree.add(entry);
                 } else {
                   break;
@@ -140,7 +140,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         }
         
         // Write top scorers for this gun type
-        buffer.writeln('${GunHelpers.getLabel(gunType)}');
+        buffer.writeln(GunHelpers.getLabel(gunType));
         int position = 1;
         for (final entry in topThree) {
           final member = _getMember(entry.key);

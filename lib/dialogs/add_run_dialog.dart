@@ -29,7 +29,6 @@ class AddRunDialog extends StatefulWidget {
 class _AddRunDialogState extends State<AddRunDialog> {
   final _timeCtrl = TextEditingController();
   final _pointsCtrl = TextEditingController();
-  final _penaltiesCtrl = TextEditingController();
   
   late GunType _gunType;
   double? _hitFactor;
@@ -42,7 +41,6 @@ class _AddRunDialogState extends State<AddRunDialog> {
     if (widget.existingRun != null) {
       _timeCtrl.text = widget.existingRun!.time.toString();
       _pointsCtrl.text = widget.existingRun!.points.toString();
-      _penaltiesCtrl.text = widget.existingRun!.penalties.toString();
       _gunType = widget.existingRun!.gun;
       _calculateHitFactor();
     } else {
@@ -54,17 +52,15 @@ class _AddRunDialogState extends State<AddRunDialog> {
   void dispose() {
     _timeCtrl.dispose();
     _pointsCtrl.dispose();
-    _penaltiesCtrl.dispose();
     super.dispose();
   }
 
   void _calculateHitFactor() {
     final time = double.tryParse(_timeCtrl.text);
     final points = int.tryParse(_pointsCtrl.text);
-    final penalties = int.tryParse(_penaltiesCtrl.text) ?? 0;
 
     if (time != null && time > 0 && points != null) {
-      setState(() => _hitFactor = ((points - penalties) / time * 100).floor() / 100);
+      setState(() => _hitFactor = ((points) / time * 100).floor() / 100);
     } else {
       setState(() => _hitFactor = null);
     }
@@ -86,8 +82,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
       memberId: widget.member.id,
       time: time,
       points: points,
-      gun: _gunType,
-      penalties: int.tryParse(_penaltiesCtrl.text) ?? 0,
+      gun: _gunType
     );
 
     widget.onSave(run);
@@ -126,7 +121,6 @@ class _AddRunDialogState extends State<AddRunDialog> {
                 const SizedBox(height: 16),
                 _buildField('Time (seconds)', _timeCtrl, 'e.g., 12.45', isDecimal: true),
                 _buildField('Points', _pointsCtrl, 'e.g., 85'),
-                _buildField('Penalties', _penaltiesCtrl, 'e.g., 10 (optional)'),
                 if (_hitFactor != null) ...[
                   const SizedBox(height: 16),
                   Container(

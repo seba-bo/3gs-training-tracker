@@ -75,7 +75,7 @@ void main() {
     expect(find.text('Clear Board'), findsOneWidget);
   });
 
-  testWidgets('Can record a score with penalties', (WidgetTester tester) async {
+  testWidgets('Can record a score', (WidgetTester tester) async {
     await tester.pumpWidget(const IPSCTrackerApp());
     await tester.pumpAndSettle(const Duration(seconds: 5));
 
