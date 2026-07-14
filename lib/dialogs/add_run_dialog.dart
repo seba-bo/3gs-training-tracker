@@ -5,6 +5,7 @@ import '../models/gun_type.dart';
 import '../utils/constants.dart';
 import '../widgets/gun_type_selector.dart';
 import '../widgets/custom_input.dart';
+import '../widgets/hit_counter.dart';
 
 class AddRunDialog extends StatefulWidget {
   final Member member;
@@ -32,6 +33,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
   
   late GunType _gunType;
   double? _hitFactor;
+  bool _useHitSelection = true; // Toggle between hit selection and manual entry
 
   @override
   void initState() {
@@ -120,7 +122,49 @@ class _AddRunDialogState extends State<AddRunDialog> {
                 ),
                 const SizedBox(height: 16),
                 _buildField('Time (seconds)', _timeCtrl, 'e.g., 12.45', isDecimal: true),
-                _buildField('Points', _pointsCtrl, 'e.g., 85'),
+                const SizedBox(height: 16),
+                // Toggle between hit selection and manual entry
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: SegmentedButton<bool>(
+                          segments: const [
+                            ButtonSegment(
+                              value: true,
+                              label: Text('Scoring Calculator'),
+                            ),
+                            ButtonSegment(
+                              value: false,
+                              label: Text('Manual Entry'),
+                            ),
+                          ],
+                          selected: {_useHitSelection},
+                          onSelectionChanged: (value) {
+                            setState(() => _useHitSelection = value.first);
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Conditionally show scoring calculator or manual input
+                if (_useHitSelection)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: HitCounter(
+                      initialPoints: int.tryParse(_pointsCtrl.text) ?? 0,
+                      onPointsChanged: (points) {
+                        setState(() {
+                          _pointsCtrl.text = points.toString();
+                          _calculateHitFactor();
+                        });
+                      },
+                    ),
+                  )
+                else
+                  _buildField('Points', _pointsCtrl, 'e.g., 85'),
                 if (_hitFactor != null) ...[
                   const SizedBox(height: 16),
                   Container(
