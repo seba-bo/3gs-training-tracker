@@ -36,6 +36,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     setState(() {
       _members = members;
+      _sortMembers();
       _sessionHistory = history;
       _activeSession = activeSession;
       _isLoading = false;
@@ -63,8 +64,15 @@ class _HomeScreenState extends State<HomeScreen> {
     await StorageService.saveSessionHistory(_sessionHistory);
   }
 
+  void _sortMembers() {
+    _members.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+  }
+
   void _addMember(Member member) {
-    setState(() => _members.add(member));
+    setState(() {
+      _members.add(member);
+      _sortMembers();
+    });
     _saveMembersData();
   }
 
@@ -91,11 +99,16 @@ class _HomeScreenState extends State<HomeScreen> {
       return;
     }
 
+    // Sort the selected participants lexicographically by member name (case-insensitive)
+    final selectedMembers = _members.where((m) => participantIds.contains(m.id)).toList();
+    selectedMembers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final sortedIds = selectedMembers.map((m) => m.id).toList();
+
     setState(() {
       _activeSession = TrainingSession(
         id: DateTime.now().millisecondsSinceEpoch,
         date: DateTime.now(),
-        participantIds: participantIds,
+        participantIds: sortedIds,
         runs: [],
       );
       // Stay on session screen - don't switch to roster

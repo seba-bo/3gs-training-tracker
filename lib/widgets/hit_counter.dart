@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 class HitCounter extends StatefulWidget {
   final ValueChanged<int> onPointsChanged;
@@ -75,7 +76,11 @@ class _HitCounterState extends State<HitCounter> {
 
   Widget _buildHitButton(String label, int points, Color color) {
     return ElevatedButton(
-      onPressed: () => _addHit(label, points),
+      onPressed: () {
+        HapticFeedback.mediumImpact();
+        FocusManager.instance.primaryFocus?.unfocus();
+        _addHit(label, points);
+      },
       style: ElevatedButton.styleFrom(
         backgroundColor: color,
         padding: const EdgeInsets.symmetric(vertical: 12),
