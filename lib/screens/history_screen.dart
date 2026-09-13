@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:share_plus/share_plus.dart';
 import '../models/member.dart';
 import '../models/training_session.dart';
 import '../models/gun_type.dart';
@@ -8,6 +9,8 @@ import '../widgets/custom_card.dart';
 import '../utils/constants.dart';
 import '../utils/gun_helpers.dart';
 import '../utils/formatters.dart';
+import '../services/session_html_generator.dart';
+import '../services/html_export_file.dart';
 
 class HistoryScreen extends StatefulWidget {
   final List<Member> members;
@@ -46,21 +49,24 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   String _generateExportText(TrainingSession session) {
     final buffer = StringBuffer();
-    buffer.writeln('3GS Training Session - ${Formatters.formatDate(session.date)}');
+    buffer.writeln(
+      '3GS Training Session - ${Formatters.formatDate(session.date)}',
+    );
     buffer.writeln();
-    
-        
+
     // Group runs by gun type and find best run per member per gun
     final gunTypes = [GunType.pistol, GunType.pcc, GunType.shotgun];
-    
+
     for (final gunType in gunTypes) {
       final runsForGun = session.runs.where((r) => r.gun == gunType).toList();
-      
+
       if (runsForGun.isEmpty) continue;
-      
+
       // Find maximum points achieved in this gun category (this session's "perfect score")
-      final maxPointsInCategory = runsForGun.map((r) => r.points).reduce((a, b) => a > b ? a : b);
-      
+      final maxPointsInCategory = runsForGun
+          .map((r) => r.points)
+          .reduce((a, b) => a > b ? a : b);
+
       // Find best run per member for this gun type
       final memberBestRuns = <int, Run>{};
       for (final run in runsForGun) {
@@ -69,44 +75,54 @@ class _HistoryScreenState extends State<HistoryScreen> {
           memberBestRuns[run.memberId] = run;
         }
       }
-      
+
       // Sort by hit factor
       final sortedEntries = memberBestRuns.entries.toList()
-        ..sort((a, b) => b.value.finalHitFactor.compareTo(a.value.finalHitFactor));
-      
+        ..sort(
+          (a, b) => b.value.finalHitFactor.compareTo(a.value.finalHitFactor),
+        );
+
       // Write results for this gun type
       buffer.writeln('Rankings by Best Hit Factor');
       buffer.writeln('(${GunHelpers.getLabel(gunType)})');
-      
+
       int position = 1;
       for (final entry in sortedEntries) {
         final member = _getMember(entry.key);
         if (member == null) continue;
-        
+
         final run = entry.value;
-        final medal = position == 1 ? '🥇' : position == 2 ? '🥈' : position == 3 ? '🥉' : position.toString();
-        
+        final medal = position == 1
+            ? '🥇'
+            : position == 2
+            ? '🥈'
+            : position == 3
+            ? '🥉'
+            : position.toString();
+
         // Perfect score: max points in this category
         final isPerfect = run.points >= maxPointsInCategory;
         final perfectScore = isPerfect ? ' 🎯' : '';
-        
-        buffer.writeln('$medal ${member.name}: ${run.finalHitFactor.toStringAsFixed(2)}$perfectScore (${run.finalPoints} pts in ${run.time}s)');
-        
+
+        buffer.writeln(
+          '$medal ${member.name}: ${run.finalHitFactor.toStringAsFixed(2)}$perfectScore (${run.finalPoints} pts in ${run.time}s)',
+        );
+
         position++;
       }
-      
+
       buffer.writeln();
     }
 
     // Top 3 Scorers by Gun Type
     if (session.runs.isNotEmpty) {
       buffer.writeln('Top Scorers');
-      
+
       for (final gunType in gunTypes) {
         final runsForGun = session.runs.where((r) => r.gun == gunType).toList();
-        
+
         if (runsForGun.isEmpty) continue;
-        
+
         // Find best run per member for this gun type
         final memberBestPoints = <int, Run>{};
         for (final run in runsForGun) {
@@ -115,11 +131,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
             memberBestPoints[run.memberId] = run;
           }
         }
-        
+
         // Sort by hit factor
         final sortedEntries = memberBestPoints.entries.toList()
           ..sort((a, b) => b.value.finalPoints.compareTo(a.value.finalPoints));
-        
+
         // Get top 3, but include all members tied at position 3
         final topThree = <MapEntry<int, Run>>[];
         if (sortedEntries.isNotEmpty) {
@@ -138,17 +154,25 @@ class _HistoryScreenState extends State<HistoryScreen> {
             }
           }
         }
-        
+
         // Write top scorers for this gun type
         buffer.writeln(GunHelpers.getLabel(gunType));
         int position = 1;
         for (final entry in topThree) {
           final member = _getMember(entry.key);
           if (member == null) continue;
-          
+
           final run = entry.value;
-          final medal = position == 1 ? '🥇' : position == 2 ? '🥈' : position == 3 ? '🥉' : '⭐';
-          buffer.writeln('$medal ${member.name}: ${run.finalPoints} pts (${run.finalHitFactor.toStringAsFixed(2)} hit factor in ${run.time}s)');
+          final medal = position == 1
+              ? '🥇'
+              : position == 2
+              ? '🥈'
+              : position == 3
+              ? '🥉'
+              : '⭐';
+          buffer.writeln(
+            '$medal ${member.name}: ${run.finalPoints} pts (${run.finalHitFactor.toStringAsFixed(2)} hit factor in ${run.time}s)',
+          );
           if (position < 3) position++;
         }
         buffer.writeln();
@@ -160,14 +184,41 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   void _exportSession(TrainingSession session) {
     final exportText = _generateExportText(session);
-    
+
     Clipboard.setData(ClipboardData(text: exportText));
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Session exported to clipboard!'),
         backgroundColor: Colors.green,
         duration: Duration(seconds: 2),
+      ),
+    );
+  }
+
+  Future<void> _exportHtmlSession(TrainingSession session) async {
+    final exportTimestamp = DateTime.now();
+
+    final fileName = SessionHtmlGenerator.fileName(exportTimestamp);
+    final html = SessionHtmlGenerator.generate(
+      session: session,
+      members: widget.members,
+    );
+
+    final htmlFile = await createHtmlExportFile(html: html, fileName: fileName);
+
+    await Share.shareXFiles(
+      [htmlFile],
+      subject: fileName,
+      text: '3GS training session export',
+    );
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Session exported as $fileName.'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -196,10 +247,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               );
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -327,9 +375,13 @@ class _HistoryScreenState extends State<HistoryScreen> {
     final isExpanded = _expandedSessions.contains(session.id);
 
     // Group runs by gun type
-    final pistolRuns = session.runs.where((r) => r.gun == GunType.pistol).length;
+    final pistolRuns = session.runs
+        .where((r) => r.gun == GunType.pistol)
+        .length;
     final pccRuns = session.runs.where((r) => r.gun == GunType.pcc).length;
-    final shotgunRuns = session.runs.where((r) => r.gun == GunType.shotgun).length;
+    final shotgunRuns = session.runs
+        .where((r) => r.gun == GunType.shotgun)
+        .length;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -398,7 +450,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                     const SizedBox(height: 12),
                     const Divider(height: 1),
                     const SizedBox(height: 12),
-                    
+
                     // Participants
                     Wrap(
                       spacing: 8,
@@ -407,7 +459,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         final memberRuns = session.runs
                             .where((r) => r.memberId == member.id)
                             .length;
-                        
+
                         return Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 10,
@@ -420,7 +472,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.person, size: 14, color: Colors.grey),
+                              const Icon(
+                                Icons.person,
+                                size: 14,
+                                color: Colors.grey,
+                              ),
                               const SizedBox(width: 6),
                               Text(
                                 member.name,
@@ -452,12 +508,12 @@ class _HistoryScreenState extends State<HistoryScreen> {
                         );
                       }).toList(),
                     ),
-                    
+
                     if (session.runs.isNotEmpty) ...[
                       const SizedBox(height: 12),
                       const Divider(height: 1),
                       const SizedBox(height: 12),
-                      
+
                       // Gun type breakdown
                       Row(
                         children: [
@@ -468,7 +524,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
                             _buildGunTypeBadge(GunType.pcc, pccRuns),
                           ],
                           if (shotgunRuns > 0) ...[
-                            if (pistolRuns > 0 || pccRuns > 0) const SizedBox(width: 8),
+                            if (pistolRuns > 0 || pccRuns > 0)
+                              const SizedBox(width: 8),
                             _buildGunTypeBadge(GunType.shotgun, shotgunRuns),
                           ],
                         ],
@@ -478,7 +535,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 ),
               ),
             ),
-            
+
             // Expanded details
             if (isExpanded) ...[
               const Divider(height: 1),
@@ -487,132 +544,162 @@ class _HistoryScreenState extends State<HistoryScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  // Action Buttons
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      ElevatedButton.icon(
-                        onPressed: () => _showResumeSessionDialog(session),
-                        icon: const Icon(Icons.play_arrow, size: 16),
-                        label: const Text('Resume'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _exportSession(session),
-                        icon: const Icon(Icons.file_download, size: 16),
-                        label: const Text('Export'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                      ElevatedButton.icon(
-                        onPressed: () => _showDeleteSessionDialog(session),
-                        icon: const Icon(Icons.delete_outline, size: 16),
-                        label: const Text('Delete'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 16),
-                  
-                  // Participants
-                  const Text(
-                    'Participants',
-                    style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: participants.map((member) {
-                      final memberRuns = session.runs
-                          .where((r) => r.memberId == member.id)
-                          .length;
-                      
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppConstants.cardBg,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.person, size: 14, color: Colors.grey),
-                            const SizedBox(width: 6),
-                            Text(
-                              member.name,
-                              style: const TextStyle(fontSize: 12),
+                    // Action Buttons
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        ElevatedButton.icon(
+                          onPressed: () => _showResumeSessionDialog(session),
+                          icon: const Icon(Icons.play_arrow, size: 16),
+                          label: const Text('Resume'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
                             ),
-                            if (memberRuns > 0) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 6,
-                                  vertical: 2,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.green.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
-                                child: Text(
-                                  '$memberRuns',
-                                  style: const TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.green,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ],
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
-                      );
-                    }).toList(),
-                  ),
-                  
-                  // Detailed Results (if runs exist)
-                  if (session.runs.isNotEmpty) ...[
+                        ElevatedButton.icon(
+                          onPressed: () => _exportSession(session),
+                          icon: const Icon(Icons.file_download, size: 16),
+                          label: const Text('Export'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _exportHtmlSession(session),
+                          icon: const Icon(Icons.html, size: 16),
+                          label: const Text('HTML'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.teal,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        ElevatedButton.icon(
+                          onPressed: () => _showDeleteSessionDialog(session),
+                          icon: const Icon(Icons.delete_outline, size: 16),
+                          label: const Text('Delete'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
                     const SizedBox(height: 16),
+
+                    // Participants
                     const Text(
-                      'Detailed Results',
+                      'Participants',
                       style: TextStyle(
                         fontSize: 14,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    ..._buildDetailedResults(session),
-                  ],
+                    const SizedBox(height: 8),
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: participants.map((member) {
+                        final memberRuns = session.runs
+                            .where((r) => r.memberId == member.id)
+                            .length;
+
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 10,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppConstants.cardBg,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.person,
+                                size: 14,
+                                color: Colors.grey,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                member.name,
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                              if (memberRuns > 0) ...[
+                                const SizedBox(width: 6),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withOpacity(0.2),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: Text(
+                                    '$memberRuns',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+
+                    // Detailed Results (if runs exist)
+                    if (session.runs.isNotEmpty) ...[
+                      const SizedBox(height: 16),
+                      const Text(
+                        'Detailed Results',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ..._buildDetailedResults(session),
+                    ],
                   ],
                 ),
               ),
@@ -629,10 +716,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     for (final run in session.runs) {
       final member = _getMember(run.memberId);
       if (member != null) {
-        runsWithMembers.add({
-          'member': member,
-          'run': run,
-        });
+        runsWithMembers.add({'member': member, 'run': run});
       }
     }
 
@@ -647,22 +731,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
       final item = entry.value;
       final member = item['member'] as Member;
       final run = item['run'] as Run;
-      
+
       final medal = index == 0
           ? '🥇'
           : index == 1
-              ? '🥈'
-              : index == 2
-                  ? '🥉'
-                  : '${index + 1}.';
+          ? '🥈'
+          : index == 2
+          ? '🥉'
+          : '${index + 1}.';
 
       final borderColor = index == 0
           ? Colors.yellow
           : index == 1
-              ? Colors.grey
-              : index == 2
-                  ? Colors.orange
-                  : null;
+          ? Colors.grey
+          : index == 2
+          ? Colors.orange
+          : null;
 
       return Container(
         margin: const EdgeInsets.only(bottom: 8),
@@ -724,17 +808,11 @@ class _HistoryScreenState extends State<HistoryScreen> {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(
-            GunHelpers.getIcon(gun),
-            style: const TextStyle(fontSize: 14),
-          ),
+          Text(GunHelpers.getIcon(gun), style: const TextStyle(fontSize: 14)),
           const SizedBox(width: 6),
           Text(
             '$count',
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
           ),
         ],
       ),
