@@ -65,7 +65,9 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _sortMembers() {
-    _members.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _members.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
   }
 
   void _addMember(Member member) {
@@ -100,8 +102,12 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     // Sort the selected participants lexicographically by member name (case-insensitive)
-    final selectedMembers = _members.where((m) => participantIds.contains(m.id)).toList();
-    selectedMembers.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    final selectedMembers = _members
+        .where((m) => participantIds.contains(m.id))
+        .toList();
+    selectedMembers.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
     final sortedIds = selectedMembers.map((m) => m.id).toList();
 
     setState(() {
@@ -113,7 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
       );
       // Stay on session screen - don't switch to roster
     });
-    
+
     // Save active session immediately for crash recovery
     _saveActiveSession();
   }
@@ -173,7 +179,7 @@ class _HomeScreenState extends State<HomeScreen> {
       _activeSession = null;
     });
     _saveHistoryData();
-    
+
     // Clear temporary active session storage
     StorageService.clearActiveSession();
 
@@ -191,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _activeSession!.runs.add(run);
     });
-    
+
     // Save active session for crash recovery
     _saveActiveSession();
   }
@@ -202,7 +208,7 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _activeSession!.runs.removeWhere((r) => r.id == runId);
     });
-    
+
     // Save active session for crash recovery
     _saveActiveSession();
   }
@@ -211,12 +217,14 @@ class _HomeScreenState extends State<HomeScreen> {
     if (_activeSession == null) return;
 
     setState(() {
-      final index = _activeSession!.runs.indexWhere((r) => r.id == updatedRun.id);
+      final index = _activeSession!.runs.indexWhere(
+        (r) => r.id == updatedRun.id,
+      );
       if (index != -1) {
         _activeSession!.runs[index] = updatedRun;
       }
     });
-    
+
     // Save active session for crash recovery
     _saveActiveSession();
   }
@@ -229,23 +237,26 @@ class _HomeScreenState extends State<HomeScreen> {
       // This allows adding new participants to the session
       final currentParticipants = Set<int>.from(_activeSession!.participantIds);
       final newParticipants = Set<int>.from(newOrder);
-      
+
       // Merge: keep existing and add new ones
-      final allParticipants = {...currentParticipants, ...newParticipants}.toList();
-      
+      final allParticipants = {
+        ...currentParticipants,
+        ...newParticipants,
+      }.toList();
+
       _activeSession = _activeSession!.copyWith(
         participantIds: allParticipants,
         shootingOrder: newOrder,
       );
     });
-    
+
     // Save active session for crash recovery
     _saveActiveSession();
   }
 
   void _updateSessionMaxPoints(int maxPoints) {
     if (_activeSession == null) return;
-    
+
     setState(() {
       _activeSession = _activeSession!.copyWith(maxPoints: maxPoints);
     });
@@ -279,7 +290,7 @@ class _HomeScreenState extends State<HomeScreen> {
       // Switch to session screen
       _currentScreen = AppScreen.session;
     });
-    
+
     _saveHistoryData();
     _saveActiveSession();
 
@@ -300,9 +311,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
@@ -311,10 +320,7 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppConstants.primaryBg,
-              AppConstants.secondaryBg,
-            ],
+            colors: [AppConstants.primaryBg, AppConstants.secondaryBg],
           ),
         ),
         child: SafeArea(
@@ -364,7 +370,7 @@ class _HomeScreenState extends State<HomeScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.2),
+        color: Colors.green.withValues(alpha: 0.2),
         border: Border.all(color: Colors.green),
         borderRadius: BorderRadius.circular(8),
       ),

@@ -5,7 +5,7 @@ import 'utils/app_theme.dart';
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Set system UI overlay style
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
@@ -15,7 +15,7 @@ void main() {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-  
+
   runApp(const IPSCTrackerApp());
 }
 
@@ -32,16 +32,15 @@ class IPSCTrackerApp extends StatelessWidget {
         primaryColor: AppTheme.accentBlue,
         scaffoldBackgroundColor: AppTheme.primaryDark,
         fontFamily: 'System',
-        
+
         // Color scheme
         colorScheme: const ColorScheme.dark(
           primary: AppTheme.accentBlue,
           secondary: AppTheme.accentGreen,
           surface: AppTheme.cardBg,
-          background: AppTheme.primaryDark,
           error: AppTheme.accentRed,
         ),
-        
+
         // Card theme
         cardTheme: CardThemeData(
           elevation: 0,
@@ -49,7 +48,7 @@ class IPSCTrackerApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           ),
         ),
-        
+
         // AppBar theme
         appBarTheme: const AppBarTheme(
           elevation: 0,
@@ -57,7 +56,7 @@ class IPSCTrackerApp extends StatelessWidget {
           centerTitle: true,
           titleTextStyle: AppTheme.heading2,
         ),
-        
+
         // Text theme
         textTheme: const TextTheme(
           displayLarge: AppTheme.heading1,
@@ -68,7 +67,7 @@ class IPSCTrackerApp extends StatelessWidget {
           bodySmall: AppTheme.bodySmall,
           labelLarge: AppTheme.label,
         ),
-        
+
         // Floating Action Button
         floatingActionButtonTheme: FloatingActionButtonThemeData(
           backgroundColor: AppTheme.accentGreen,
@@ -78,7 +77,7 @@ class IPSCTrackerApp extends StatelessWidget {
             borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
           ),
         ),
-        
+
         // Elevated Button Theme - WICHTIG für lesbare Button-Texte überall
         elevatedButtonTheme: ElevatedButtonThemeData(
           style: ElevatedButton.styleFrom(

@@ -33,14 +33,10 @@ class MemberCard extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: Colors.blue.withOpacity(0.2),
+              color: Colors.blue.withValues(alpha: 0.2),
               borderRadius: BorderRadius.circular(24),
             ),
-            child: const Icon(
-              Icons.person,
-              color: Colors.blue,
-              size: 24,
-            ),
+            child: const Icon(Icons.person, color: Colors.blue, size: 24),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -57,10 +53,7 @@ class MemberCard extends StatelessWidget {
                 if (member.memberNumber != null)
                   Text(
                     '# ${member.memberNumber}',
-                    style: const TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                 const SizedBox(height: 4),
                 Row(

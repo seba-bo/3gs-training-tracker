@@ -30,7 +30,7 @@ class AddRunDialog extends StatefulWidget {
 class _AddRunDialogState extends State<AddRunDialog> {
   final _timeCtrl = TextEditingController();
   final _pointsCtrl = TextEditingController();
-  
+
   late GunType _gunType;
   double? _hitFactor;
   bool _useHitSelection = true; // Toggle between hit selection and manual entry
@@ -38,7 +38,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
   @override
   void initState() {
     super.initState();
-    
+
     // Initialize with existing run data if editing
     if (widget.existingRun != null) {
       _timeCtrl.text = widget.existingRun!.time.toString();
@@ -84,7 +84,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
       memberId: widget.member.id,
       time: time,
       points: points,
-      gun: _gunType
+      gun: _gunType,
     );
 
     widget.onSave(run);
@@ -93,11 +93,8 @@ class _AddRunDialogState extends State<AddRunDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      onWillPop: () async {
-        // Don't do anything special on back button - just close
-        return true;
-      },
+    return PopScope(
+      canPop: true,
       child: Dialog(
         child: SingleChildScrollView(
           child: Container(
@@ -108,20 +105,31 @@ class _AddRunDialogState extends State<AddRunDialog> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.existingRun != null 
+                  widget.existingRun != null
                       ? 'Edit Run for ${widget.member.name}'
                       : 'Add Run for ${widget.member.name}',
-                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 const SizedBox(height: 24),
-                const Text('Gun Type', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Gun Type',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 GunTypeSelector(
                   selected: _gunType,
                   onChanged: (gun) => setState(() => _gunType = gun),
                 ),
                 const SizedBox(height: 16),
-                _buildField('Time (seconds)', _timeCtrl, 'e.g., 12.45', isDecimal: true),
+                _buildField(
+                  'Time (seconds)',
+                  _timeCtrl,
+                  'e.g., 12.45',
+                  isDecimal: true,
+                ),
                 const SizedBox(height: 16),
                 // Toggle between hit selection and manual entry
                 Padding(
@@ -175,7 +183,10 @@ class _AddRunDialogState extends State<AddRunDialog> {
                     ),
                     child: Column(
                       children: [
-                        const Text('Hit Factor', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                        const Text(
+                          'Hit Factor',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
                         Text(
                           _hitFactor!.toStringAsFixed(2),
                           style: const TextStyle(
@@ -209,7 +220,9 @@ class _AddRunDialogState extends State<AddRunDialog> {
                           backgroundColor: Colors.green,
                           padding: const EdgeInsets.symmetric(vertical: 14),
                         ),
-                        child: Text(widget.existingRun != null ? 'Update' : 'Save Run'),
+                        child: Text(
+                          widget.existingRun != null ? 'Update' : 'Save Run',
+                        ),
                       ),
                     ),
                   ],
@@ -222,13 +235,21 @@ class _AddRunDialogState extends State<AddRunDialog> {
     );
   }
 
-  Widget _buildField(String label, TextEditingController ctrl, String hint, {bool isDecimal = false}) {
+  Widget _buildField(
+    String label,
+    TextEditingController ctrl,
+    String hint, {
+    bool isDecimal = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+          Text(
+            label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+          ),
           const SizedBox(height: 8),
           CustomInput(
             hint: hint,
