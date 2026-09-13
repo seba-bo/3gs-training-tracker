@@ -11,19 +11,18 @@ class SessionHtmlGenerator {
     required List<Member> members,
   }) {
     final membersById = {for (final member in members) member.id: member};
-    final rows = session.runs.map((run) {
+    final rows = session.runs.asMap().entries.map((entry) {
+      final runNumber = entry.key + 1;
+      final run = entry.value;
       final memberName = membersById[run.memberId]?.name ?? 'Unknown member';
       return '''
-        <tr>
+        <tr data-run="$runNumber" data-member="${run.memberId}" data-gun="${run.gun.name}" data-time="${run.time}" data-points="${run.finalPoints}" data-hf="${run.finalHitFactor}">
+          <td>$runNumber</td>
           <td>${_escape(memberName)}</td>
           <td>${_escape(GunHelpers.getLabel(run.gun))}</td>
-          <td>${_escape(run.stageName ?? '')}</td>
           <td>${run.time.toStringAsFixed(2)}</td>
-          <td>${run.points}</td>
-          <td>${run.penalties}</td>
           <td>${run.finalPoints}</td>
           <td>${run.finalHitFactor.toStringAsFixed(2)}</td>
-          <td>${_escape(run.notes ?? '')}</td>
         </tr>''';
     }).join();
 
@@ -32,6 +31,7 @@ class SessionHtmlGenerator {
       if (runs.isEmpty) return '';
       return _gunSection(gun, runs, membersById);
     }).join();
+    final trainingDataControls = _trainingDataControls(session, membersById);
 
     return '''<!DOCTYPE html>
 <html lang="en">
@@ -55,6 +55,10 @@ class SessionHtmlGenerator {
     .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; margin: 8px 0 0 52px; }
     .legend-item { align-items: center; display: inline-flex; gap: 6px; }
     .legend-swatch { display: inline-block; height: 3px; width: 20px; }
+    .table-controls { align-items: end; display: flex; flex-wrap: wrap; gap: 12px; margin-top: 16px; }
+    .table-controls label { display: flex; flex-direction: column; gap: 4px; }
+    .table-controls label:last-child { flex-direction: row; align-items: center; }
+    .table-controls select { min-width: 140px; padding: 6px; }
     table { border-collapse: collapse; margin-top: 16px; width: 100%; }
     th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
     th { background: #f1f3f4; }
@@ -71,8 +75,9 @@ class SessionHtmlGenerator {
     $gunSections
     <h2>Complete Training Data</h2>
     ${session.runs.isEmpty ? '<p>No runs recorded.</p>' : '''
-    <table>
-      <thead><tr><th>Member</th><th>Gun</th><th>Stage</th><th>Time (s)</th><th>Points</th><th>Penalties</th><th>Final points</th><th>Hit factor</th><th>Notes</th></tr></thead>
+    $trainingDataControls
+    <table id="training-data-table">
+      <thead><tr><th>Run</th><th>Member</th><th>Gun</th><th>Time (s)</th><th>Points</th><th>Hit factor</th></tr></thead>
       <tbody>$rows</tbody>
     </table>'''}
   </main>
@@ -83,8 +88,73 @@ class SessionHtmlGenerator {
       point.style.display = visible ? '' : 'none';
     });
   }
+
+  function filterAndSortTrainingData() {
+    var table = document.getElementById('training-data-table');
+    if (!table) return;
+    var member = document.getElementById('training-member-filter').value;
+    var gun = document.getElementById('training-gun-filter').value;
+    var sortBy = document.getElementById('training-sort').value;
+    var descending = document.getElementById('training-sort-desc').checked;
+    var rows = Array.from(table.tBodies[0].rows);
+    rows.forEach(function (row) {
+      row.hidden = (member !== 'all' && row.dataset.member !== member) ||
+        (gun !== 'all' && row.dataset.gun !== gun);
+    });
+    rows.sort(function (a, b) {
+      var aValue = a.dataset[sortBy];
+      var bValue = b.dataset[sortBy];
+      var result = ['run', 'time', 'points', 'hf'].indexOf(sortBy) >= 0
+        ? Number(aValue) - Number(bValue)
+        : aValue.localeCompare(bValue);
+      return descending ? -result : result;
+    });
+    rows.forEach(function (row) { table.tBodies[0].appendChild(row); });
+  }
 </script>
 </html>''';
+  }
+
+  static String _trainingDataControls(
+    TrainingSession session,
+    Map<int, Member> membersById,
+  ) {
+    final memberIds = session.runs.map((run) => run.memberId).toSet().toList()
+      ..sort();
+    final memberOptions = memberIds.map((id) {
+      final member = membersById[id];
+      final name = member?.name ?? 'Unknown member';
+      return '<option value="$id">${_escape(name)}</option>';
+    }).join();
+    final gunOptions = session.runs.map((run) => run.gun).toSet().map((gun) {
+      return '<option value="${gun.name}">${_escape(GunHelpers.getLabel(gun))}</option>';
+    }).join();
+
+    return '''<div class="table-controls">
+      <label>Participant
+        <select id="training-member-filter" onchange="filterAndSortTrainingData()">
+          <option value="all">All participants</option>
+          $memberOptions
+        </select>
+      </label>
+      <label>Gun
+        <select id="training-gun-filter" onchange="filterAndSortTrainingData()">
+          <option value="all">All guns</option>
+          $gunOptions
+        </select>
+      </label>
+      <label>Sort by
+        <select id="training-sort" onchange="filterAndSortTrainingData()">
+          <option value="run">Run number</option>
+          <option value="member">Participant</option>
+          <option value="gun">Gun</option>
+          <option value="time">Time</option>
+          <option value="points">Points</option>
+          <option value="hf">Hit factor</option>
+        </select>
+      </label>
+      <label><input id="training-sort-desc" type="checkbox" onchange="filterAndSortTrainingData()"> Descending</label>
+    </div>''';
   }
 
   static String _gunSection(
@@ -108,7 +178,7 @@ class SessionHtmlGenerator {
     String leaderboardRows(MapEntry<int, Run> entry) {
       final memberName = membersById[entry.key]?.name ?? 'Unknown member';
       final run = entry.value;
-      return '<tr><td>${_escape(memberName)}</td><td>${run.finalHitFactor.toStringAsFixed(2)}</td><td>${run.time.toStringAsFixed(2)} s</td></tr>';
+      return '<tr><td>${_escape(memberName)}</td><td>${run.finalHitFactor.toStringAsFixed(2)}</td><td>${run.finalPoints}</td><td>${run.time.toStringAsFixed(2)} s</td></tr>';
     }
 
     final chart = _buildChart(gun, runs, membersById);
@@ -118,7 +188,7 @@ class SessionHtmlGenerator {
       <div class="leaderboards">
         <div class="leaderboard">
           <strong>Best Hit Factor</strong>
-          <table><thead><tr><th>Member</th><th>HF</th><th>Time</th></tr></thead><tbody>
+          <table><thead><tr><th>Member</th><th>HF</th><th>Points</th><th>Time</th></tr></thead><tbody>
             ${hitFactorRows.map(leaderboardRows).join()}
           </tbody></table>
         </div>

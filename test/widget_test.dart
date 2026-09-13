@@ -16,11 +16,15 @@ void main() {
 
     expect(find.textContaining('3GS Training'), findsOneWidget);
     expect(find.text('🎯'), findsOneWidget);
+    expect(find.text('Start New Training Session'), findsOneWidget);
   });
 
   testWidgets('Can add a shooter', (WidgetTester tester) async {
     await tester.pumpWidget(const IPSCTrackerApp());
     await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    await tester.tap(find.text('Members'));
+    await tester.pumpAndSettle();
 
     expect(find.text('No shooters added yet'), findsOneWidget);
 
@@ -78,6 +82,9 @@ void main() {
   testWidgets('Can record a score', (WidgetTester tester) async {
     await tester.pumpWidget(const IPSCTrackerApp());
     await tester.pumpAndSettle(const Duration(seconds: 5));
+
+    await tester.tap(find.text('Members'));
+    await tester.pumpAndSettle();
 
     // Add shooter
     final nameField = find.ancestor(

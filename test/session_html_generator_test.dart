@@ -37,9 +37,9 @@ void main() {
     );
 
     expect(html, contains('A &amp; B'));
-    expect(html, contains('&lt;Stage&gt;'));
     expect(html, contains('10.50'));
     expect(html, contains('Best Hit Factor'));
+    expect(html, contains('<th>Points</th>'));
     expect(html, isNot(contains('Top Points')));
     expect(html, contains('Time (seconds)'));
     expect(html, contains('Complete Training Data'));
@@ -51,5 +51,17 @@ void main() {
     expect(html, contains('Guide lines:'));
     expect(html, contains('HF 2.0'));
     expect(html, contains('HF 2.5'));
+    expect(html, contains('training-member-filter'));
+    expect(html, contains('training-gun-filter'));
+    expect(html, contains('training-sort'));
+    expect(html, contains('<th>Run</th>'));
+    expect(html, contains('data-run="1"'));
+    expect(html, contains('<option value="run">Run number</option>'));
+    expect(html, contains('filterAndSortTrainingData'));
+    expect(html, contains('data-time="10.5"'));
+    expect(html, isNot(contains('<th>Stage</th>')));
+    expect(html, isNot(contains('<th>Penalties</th>')));
+    expect(html, isNot(contains('<th>Final points</th>')));
+    expect(html, isNot(contains('<th>Notes</th>')));
   });
 }

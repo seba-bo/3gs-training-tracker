@@ -17,7 +17,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  AppScreen _currentScreen = AppScreen.members;
+  AppScreen _currentScreen = AppScreen.session;
   List<Member> _members = [];
   List<TrainingSession> _sessionHistory = [];
   TrainingSession? _activeSession;
