@@ -77,7 +77,7 @@ class _HitCounterState extends State<HitCounter> {
   Widget _buildHitButton(String label, int points, Color color) {
     return ElevatedButton(
       onPressed: () {
-        HapticFeedback.mediumImpact();
+        HapticFeedback.heavyImpact();
         FocusManager.instance.primaryFocus?.unfocus();
         _addHit(label, points);
       },
