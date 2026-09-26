@@ -1,6 +1,6 @@
 name: ipsc_training
 description: "IPSC Training Tracker with Member & Session Management"
-license: MIT
+license: GPL-3.0-or-later
 
 version: 1.0.0+1
 

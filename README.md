@@ -7,7 +7,7 @@ Everything is made by AI (Copilot and Claude).
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the GNU General Public License, version 3 or (at your option) any later version. See [LICENSE.txt](LICENSE.txt) for details.
 
 ## Getting Started
 
