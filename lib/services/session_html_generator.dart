@@ -163,11 +163,20 @@ class SessionHtmlGenerator {
     Map<int, Member> membersById,
   ) {
     final bestHitFactor = <int, Run>{};
+    final bestPoints = <int, Run>{};
     for (final run in runs) {
       final currentHitFactor = bestHitFactor[run.memberId];
       if (currentHitFactor == null ||
           run.finalHitFactor > currentHitFactor.finalHitFactor) {
         bestHitFactor[run.memberId] = run;
+      }
+
+      final currentPoints = bestPoints[run.memberId];
+      if (currentPoints == null ||
+          run.finalPoints > currentPoints.finalPoints ||
+          (run.finalPoints == currentPoints.finalPoints &&
+              run.finalHitFactor > currentPoints.finalHitFactor)) {
+        bestPoints[run.memberId] = run;
       }
     }
 
@@ -175,10 +184,22 @@ class SessionHtmlGenerator {
       ..sort(
         (a, b) => b.value.finalHitFactor.compareTo(a.value.finalHitFactor),
       );
+    final pointsRows = bestPoints.entries.toList()
+      ..sort((a, b) {
+        final pointsComparison =
+            b.value.finalPoints.compareTo(a.value.finalPoints);
+        if (pointsComparison != 0) return pointsComparison;
+        return b.value.finalHitFactor.compareTo(a.value.finalHitFactor);
+      });
     String leaderboardRows(MapEntry<int, Run> entry) {
       final memberName = membersById[entry.key]?.name ?? 'Unknown member';
       final run = entry.value;
       return '<tr><td>${_escape(memberName)}</td><td>${run.finalHitFactor.toStringAsFixed(2)}</td><td>${run.finalPoints}</td><td>${run.time.toStringAsFixed(2)} s</td></tr>';
+    }
+    String pointsLeaderboardRows(MapEntry<int, Run> entry) {
+      final memberName = membersById[entry.key]?.name ?? 'Unknown member';
+      final run = entry.value;
+      return '<tr><td>${_escape(memberName)}</td><td>${run.finalPoints}</td><td>${run.finalHitFactor.toStringAsFixed(2)}</td><td>${run.time.toStringAsFixed(2)} s</td></tr>';
     }
 
     final chart = _buildChart(gun, runs, membersById);
@@ -190,6 +211,12 @@ class SessionHtmlGenerator {
           <strong>Best Hit Factor</strong>
           <table><thead><tr><th>Member</th><th>HF</th><th>Points</th><th>Time</th></tr></thead><tbody>
             ${hitFactorRows.map(leaderboardRows).join()}
+          </tbody></table>
+        </div>
+        <div class="leaderboard">
+          <strong>Best Points</strong>
+          <table><thead><tr><th>Member</th><th>Points</th><th>HF</th><th>Time</th></tr></thead><tbody>
+            ${pointsRows.map(pointsLeaderboardRows).join()}
           </tbody></table>
         </div>
       </div>

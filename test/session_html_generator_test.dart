@@ -64,4 +64,35 @@ void main() {
     expect(html, isNot(contains('<th>Final points</th>')));
     expect(html, isNot(contains('<th>Notes</th>')));
   });
+
+  test('ranks equal points by hit factor in the HTML Best Points table', () {
+    final session = TrainingSession(
+      id: 1,
+      date: DateTime(2026, 9, 26),
+      participantIds: [1, 2],
+      runs: [
+        Run(id: 1, memberId: 1, time: 10, points: 100, gun: GunType.pistol),
+        Run(id: 2, memberId: 1, time: 8, points: 100, gun: GunType.pistol),
+        Run(id: 3, memberId: 2, time: 5, points: 100, gun: GunType.pistol),
+      ],
+    );
+
+    final html = SessionHtmlGenerator.generate(
+      session: session,
+      members: [
+        Member(id: 1, name: 'Alex'),
+        Member(id: 2, name: 'Blair'),
+      ],
+    );
+    final bestPoints = html.split('<strong>Best Points</strong>').last;
+
+    expect(
+      bestPoints.indexOf('<td>Blair</td><td>100</td><td>20.00</td>'),
+      lessThan(bestPoints.indexOf('<td>Alex</td><td>100</td><td>12.50</td>')),
+    );
+    expect(
+      bestPoints,
+      contains('<td>Alex</td><td>100</td><td>12.50</td><td>8.00 s</td>'),
+    );
+  });
 }

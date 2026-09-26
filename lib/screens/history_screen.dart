@@ -127,14 +127,21 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final memberBestPoints = <int, Run>{};
         for (final run in runsForGun) {
           if (!memberBestPoints.containsKey(run.memberId) ||
-              run.finalPoints > memberBestPoints[run.memberId]!.finalPoints) {
+              run.finalPoints > memberBestPoints[run.memberId]!.finalPoints ||
+              (run.finalPoints == memberBestPoints[run.memberId]!.finalPoints &&
+                  run.finalHitFactor >
+                      memberBestPoints[run.memberId]!.finalHitFactor)) {
             memberBestPoints[run.memberId] = run;
           }
         }
 
-        // Sort by hit factor
         final sortedEntries = memberBestPoints.entries.toList()
-          ..sort((a, b) => b.value.finalPoints.compareTo(a.value.finalPoints));
+          ..sort((a, b) {
+            final pointsComparison =
+                b.value.finalPoints.compareTo(a.value.finalPoints);
+            if (pointsComparison != 0) return pointsComparison;
+            return b.value.finalHitFactor.compareTo(a.value.finalHitFactor);
+          });
 
         // Get top 3, but include all members tied at position 3
         final topThree = <MapEntry<int, Run>>[];
@@ -143,9 +150,10 @@ class _HistoryScreenState extends State<HistoryScreen> {
           if (sortedEntries.length > 1) {
             topThree.add(sortedEntries[1]);
             if (sortedEntries.length > 2) {
-              final thirdPoints = sortedEntries[2].value.finalPoints;
+              final thirdRun = sortedEntries[2].value;
               for (final entry in sortedEntries.skip(2)) {
-                if (entry.value.finalPoints == thirdPoints) {
+                if (entry.value.finalPoints == thirdRun.finalPoints &&
+                    entry.value.finalHitFactor == thirdRun.finalHitFactor) {
                   topThree.add(entry);
                 } else {
                   break;
