@@ -5,11 +5,9 @@ import '../utils/constants.dart';
 
 class AddMemberDialog extends StatefulWidget {
   final Function(Member) onAdd;
+  final Future<void> Function()? onBulkFromHtml;
 
-  const AddMemberDialog({
-    super.key,
-    required this.onAdd,
-  });
+  const AddMemberDialog({super.key, required this.onAdd, this.onBulkFromHtml});
 
   @override
   State<AddMemberDialog> createState() => _AddMemberDialogState();
@@ -28,9 +26,9 @@ class _AddMemberDialogState extends State<AddMemberDialog> {
 
   void _save() {
     if (_nameCtrl.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a name')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Please enter a name')));
       return;
     }
 
@@ -82,6 +80,24 @@ class _AddMemberDialogState extends State<AddMemberDialog> {
               controller: _numberCtrl,
               onSubmitted: (_) => _save(),
             ),
+            if (widget.onBulkFromHtml != null) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () async {
+                    await widget.onBulkFromHtml!();
+                    if (mounted) Navigator.of(context).pop();
+                  },
+                  icon: const Icon(Icons.upload_file),
+                  label: const Text('Bulk From Html Session'),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.green,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
             const SizedBox(height: 24),
             Row(
               children: [

@@ -30,6 +30,8 @@ class AddRunDialog extends StatefulWidget {
 class _AddRunDialogState extends State<AddRunDialog> {
   final _timeCtrl = TextEditingController();
   final _pointsCtrl = TextEditingController();
+  final _timeFocusNode = FocusNode();
+  final _pointsFocusNode = FocusNode();
 
   late GunType _gunType;
   double? _hitFactor;
@@ -48,12 +50,18 @@ class _AddRunDialogState extends State<AddRunDialog> {
     } else {
       _gunType = GunType.pistol;
     }
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _timeFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _timeCtrl.dispose();
     _pointsCtrl.dispose();
+    _timeFocusNode.dispose();
+    _pointsFocusNode.dispose();
     super.dispose();
   }
 
@@ -129,6 +137,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
                   _timeCtrl,
                   'e.g., 12.45',
                   isDecimal: true,
+                  focusNode: _timeFocusNode,
                 ),
                 const SizedBox(height: 16),
                 // Toggle between hit selection and manual entry
@@ -151,6 +160,11 @@ class _AddRunDialogState extends State<AddRunDialog> {
                           selected: {_useHitSelection},
                           onSelectionChanged: (value) {
                             setState(() => _useHitSelection = value.first);
+                            if (!_useHitSelection) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) _pointsFocusNode.requestFocus();
+                              });
+                            }
                           },
                         ),
                       ),
@@ -172,7 +186,12 @@ class _AddRunDialogState extends State<AddRunDialog> {
                     ),
                   )
                 else
-                  _buildField('Points', _pointsCtrl, 'e.g., 85'),
+                  _buildField(
+                    'Points',
+                    _pointsCtrl,
+                    'e.g., 85',
+                    focusNode: _pointsFocusNode,
+                  ),
                 if (_hitFactor != null) ...[
                   const SizedBox(height: 16),
                   Container(
@@ -240,6 +259,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
     TextEditingController ctrl,
     String hint, {
     bool isDecimal = false,
+    FocusNode? focusNode,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -254,6 +274,7 @@ class _AddRunDialogState extends State<AddRunDialog> {
           CustomInput(
             hint: hint,
             controller: ctrl,
+            focusNode: focusNode,
             keyboardType: isDecimal
                 ? const TextInputType.numberWithOptions(decimal: true)
                 : TextInputType.number,

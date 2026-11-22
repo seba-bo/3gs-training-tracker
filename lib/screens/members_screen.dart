@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import '../models/member.dart';
 import '../models/training_session.dart';
@@ -6,6 +9,7 @@ import '../widgets/custom_input.dart';
 import '../widgets/member_card.dart';
 import '../dialogs/add_member_dialog.dart';
 import '../dialogs/edit_member_dialog.dart';
+import '../services/session_html_importer.dart';
 
 class MembersScreen extends StatefulWidget {
   final List<Member> members;
@@ -52,18 +56,23 @@ class _MembersScreenState extends State<MembersScreen> {
 
   List<Member> _getFilteredMembers() {
     var members = List<Member>.from(widget.members);
-    
+
     // Sort alphabetically
-    members.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
-    
+    members.sort(
+      (a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()),
+    );
+
     // Filter by search query
     if (_searchQuery.isNotEmpty) {
       members = members.where((m) {
         return m.name.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-               (m.memberNumber?.toLowerCase().contains(_searchQuery.toLowerCase()) ?? false);
+            (m.memberNumber?.toLowerCase().contains(
+                  _searchQuery.toLowerCase(),
+                ) ??
+                false);
       }).toList();
     }
-    
+
     return members;
   }
 
@@ -88,7 +97,7 @@ class _MembersScreenState extends State<MembersScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            
+
             // Members list
             CustomCard(
               child: Column(
@@ -144,9 +153,11 @@ class _MembersScreenState extends State<MembersScreen> {
   void _showAddMemberDialog() {
     showDialog(
       context: context,
-      barrierDismissible: false, // Dialog kann nur mit Cancel Button geschlossen werden
+      barrierDismissible:
+          false, // Dialog kann nur mit Cancel Button geschlossen werden
       builder: (context) => AddMemberDialog(
         onAdd: widget.onAddMember,
+        onBulkFromHtml: _bulkImportFromHtml,
       ),
     );
   }
@@ -154,10 +165,8 @@ class _MembersScreenState extends State<MembersScreen> {
   void _showEditMemberDialog(Member member) {
     showDialog(
       context: context,
-      builder: (context) => EditMemberDialog(
-        member: member,
-        onSave: widget.onUpdateMember,
-      ),
+      builder: (context) =>
+          EditMemberDialog(member: member, onSave: widget.onUpdateMember),
     );
   }
 
@@ -166,9 +175,7 @@ class _MembersScreenState extends State<MembersScreen> {
       context: context,
       builder: (c) => AlertDialog(
         title: const Text('Delete Member'),
-        content: Text(
-          'Delete "${member.name}"? Historical data will be kept.',
-        ),
+        content: Text('Delete "${member.name}"? Historical data will be kept.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(c),
@@ -179,13 +186,73 @@ class _MembersScreenState extends State<MembersScreen> {
               widget.onDeleteMember(member.id);
               Navigator.pop(c);
             },
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.red),
-            ),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _bulkImportFromHtml() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: const ['html', 'htm'],
+      withData: true,
+    );
+
+    if (result == null || result.files.isEmpty) return;
+
+    final bytes = result.files.single.bytes;
+    if (bytes == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Could not read the selected HTML file')),
+      );
+      return;
+    }
+
+    final names = SessionHtmlImporter.extractMemberNames(utf8.decode(bytes));
+    if (names.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No Complete Training Data members found'),
+        ),
+      );
+      return;
+    }
+
+    final existingNames = widget.members
+        .map((member) => member.name.trim().toLowerCase())
+        .toSet();
+    var nextId = widget.members.isEmpty
+        ? 1
+        : widget.members
+                  .map((member) => member.id)
+                  .reduce((a, b) => a > b ? a : b) +
+              1;
+
+    var added = 0;
+    var skipped = 0;
+    for (final name in names) {
+      final key = name.trim().toLowerCase();
+      if (existingNames.contains(key)) {
+        skipped++;
+        continue;
+      }
+
+      widget.onAddMember(Member(id: nextId++, name: name.trim()));
+      existingNames.add(key);
+      added++;
+    }
+
+    if (!mounted) return;
+    final message = added == 0
+        ? 'All $skipped members already exist'
+        : 'Added $added member${added == 1 ? '' : 's'}'
+              '${skipped > 0 ? '; $skipped already existed' : ''}';
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
   }
 }

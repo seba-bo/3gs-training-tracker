@@ -7,6 +7,7 @@ class CustomInput extends StatelessWidget {
   final TextInputType? keyboardType;
   final Function(String)? onChanged;
   final Function(String)? onSubmitted;
+  final FocusNode? focusNode;
   final int? maxLines;
   final Widget? prefixIcon;
 
@@ -17,6 +18,7 @@ class CustomInput extends StatelessWidget {
     this.keyboardType,
     this.onChanged,
     this.onSubmitted,
+    this.focusNode,
     this.maxLines = 1,
     this.prefixIcon,
   });
@@ -24,6 +26,7 @@ class CustomInput extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return TextField(
+      focusNode: focusNode,
       controller: controller,
       keyboardType: keyboardType,
       onChanged: onChanged,
